@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25 + 5 Clock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .clock-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            width: 100%;
+            max-width: 500px;
+        }
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .timer-controls button {
+            transition: all 0.2s ease;
+        }
+        .timer-controls button:hover {
+            transform: scale(1.1);
+        }
+        #beep {
+            display: none;
+        }
+        .settings-section {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.5rem;
+        }
+        .timer-section {
+            padding: 2rem;
+        }
+        #time-left {
+            font-size: 4rem;
+            line-height: 1;
+        }
+        @media (max-width: 640px) {
+            #time-left {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function PomodoroClock() {
+            const [breakLength, setBreakLength] = useState(5);
+            const [sessionLength, setSessionLength] = useState(25);
+            const [timerLabel, setTimerLabel] = useState('Sesi');
+            const [timeLeft, setTimeLeft] = useState(25 * 60);
+            const [isRunning, setIsRunning] = useState(false);
+            
+            const intervalRef = useRef(null);
+            const audioRef = useRef(null);
+            
+            const formatTime = (timeInSeconds) => {
+                const minutes = Math.floor(timeInSeconds / 60);
+                const seconds = timeInSeconds % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            };
+            
+            useEffect(() => {
+                setTimeLeft(sessionLength * 60);
+            }, [sessionLength]);
+            const startStopTimer = () => {
+                setIsRunning(!isRunning);
+            };
+
+            useEffect(() => {
+                if (isRunning) {
+                    intervalRef.current = setInterval(() => {
+                        setTimeLeft(prev => prev - 1);
+                    }, 1000);
+                } else {
+                    clearInterval(intervalRef.current);
+                }
+                return () => clearInterval(intervalRef.current);
+            }, [isRunning]);
+
+            useEffect(() => {
+                if (timeLeft < 0) {
+                    if (audioRef.current) {
+                        audioRef.current.play();
+                    }
+                    if (timerLabel === 'Sesi') {
+                        setTimerLabel('Istirahat');
+                        setTimeLeft(breakLength * 60);
+                    } else {
+                        setTimerLabel('Sesi');
+                        setTimeLeft(sessionLength * 60);
+                    }
+                }
+            }, [timeLeft, timerLabel, breakLength, sessionLength]);
+            
+            const changeBreakLength = (increment) => {
+                if (!isRunning) {
+                    const newLength = breakLength + increment;
+                    if (newLength >= 1 && newLength <= 60) {
+                        setBreakLength(newLength);
+                        if (timerLabel === 'Istirahat') {
+                            setTimeLeft(newLength * 60);
+                        }
+                    }
+                }
+            };
+            
+            const changeSessionLength = (increment) => {
+                if (!isRunning) {
+                    const newLength = sessionLength + increment;
+                    if (newLength >= 1 && newLength <= 60) {
+                        setSessionLength(newLength);
+                        if (timerLabel === 'Sesi') {
+                            setTimeLeft(newLength * 60);
+                        }
+                    }
+                }
+            };
+
+            const resetTimer = () => {
+                clearInterval(intervalRef.current);
+                setIsRunning(false);
+                
+                setBreakLength(5);
+                setSessionLength(25);
+                setTimerLabel('Sesi');
+                setTimeLeft(25 * 60);
+                
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.currentTime = 0;
+                }
+            };
+            
+            return (
+                <div className="clock-container">
+                    <h1 className="text-3xl font-bold text-center py-6 bg-purple-600 text-white">
+                        25 + 5 Clock
+                    </h1>
+                    
+                    <div className="settings-section grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="break-control text-center">
+                            <h2 id="break-label" className="text-xl font-semibold mb-2 text-purple-800">
+                                Panjang Istirahat
+                            </h2>
+                            <div className="flex items-center justify-center space-x-4">
+                                <button 
+                                    id="break-decrement"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeBreakLength(-1)}
+                                >
+                                    <i className="fas fa-arrow-down"></i>
+                                </button>
+                                <span id="break-length" className="text-2xl font-bold w-10">
+                                    {breakLength}
+                                </span>
+                                <button 
+                                    id="break-increment"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeBreakLength(1)}
+                                >
+                                    <i className="fas fa-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="session-control text-center">
+                            <h2 id="session-label" className="text-xl font-semibold mb-2 text-purple-800">
+                                Durasi Sesi
+                            </h2>
+                            <div className="flex items-center justify-center space-x-4">
+                                <button 
+                                    id="session-decrement"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeSessionLength(-1)}
+                                >
+                                    <i className="fas fa-arrow-down"></i>
+                                </button>
+                                <span id="session-length" className="text-2xl font-bold w-10">
+                                    {sessionLength}
+                                </span>
+                                <button 
+                                    id="session-increment"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeSessionLength(1)}
+                                >
+                                    <i className="fas fa-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="timer-section text-center">
+                        <div className="mb-8">
+                            <h2 id="timer-label" className="text-2xl font-semibold mb-4 text-purple-800">
+                                {timerLabel}
+                            </h2>
+                            <div id="time-left" className="timer-display text-purple-900">
+                                {formatTime(timeLeft)}
+                            </div>
+                        </div>
+                        
+                        <div className="timer-controls flex justify-center space-x-6">
+                            <button 
+                                id="start_stop"
+                                className="bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-xl"
+                                onClick={startStopTimer}
+                            >
+                                {isRunning ? <i className="fas fa-pause"></i> : <i className="fas fa-play"></i>}
+                            </button>
+                            <button 
+                                id="reset"
+                                className="bg-red-500 hover:bg-red-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-xl"
+                                onClick={resetTimer}
+                            >
+                                <i className="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <audio 
+                        id="beep" 
+                        ref={audioRef} 
+                        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
+                        preload="auto"
+                    />
+                    
+                    <div className="py-4 text-center text-sm text-purple-700">
+                        Dibuat dengan React & Tailwind CSS
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PomodoroClock />);
+    </script>
+    
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+</body>
+</html>
