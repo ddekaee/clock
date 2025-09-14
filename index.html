@@ -1,36 +1,259 @@
-#Technology Stack
-1. You can use any mix of HTML, JavaScript, CSS, Bootstrap, SASS, React, Redux, and jQuery to complete this project. You should use a frontend framework (like React for example) because this section is about learning frontend frameworks. Additional technologies not listed above are not recommended and using them is at your own risk. We are looking at supporting other frontend frameworks like Angular and Vue, but they are not currently supported. We will accept and try to fix all issue reports that use the suggested technology stack for this project. Happy coding!
-#Content
-1. I can see an element with id="break-label" that contains a string (e.g. “Break Length”).
-2. I can see an element with id="session-label" that contains a string (e.g. "Session Length”).
-3. I can see two clickable elements with corresponding IDs: id="break-decrement" and id="session-decrement".
-4. I can see two clickable elements with corresponding IDs: id="break-increment" and id="session-increment".
-5. I can see an element, with corresponding id="break-length", which by default (on load) displays a value of 5.
-6. I can see an element, with corresponding id="session-length", which by default displays a value of 25.
-7. I can see an element, with corresponding id="timer-label", that contains a string indicating a session is initialized (e.g. "Session").
-8. I can see an element with corresponding id="time-left". NOTE: Paused or running, the value in this field should always be displayed in mm:ss format (i.e. 25:00).858ms
-9. I can see a clickable element with corresponding id="start_stop".
-10. I can see a clickable element with corresponding id="reset".
-#Timer
-1. When I click the element with the id of "reset", any running timer should be stopped, the value within id="break-length" should return to 5, the value within id="session-length" should return to 25, and the element with id="time-left" should reset to it's default state.
-Timer has not reached 00:00.
-Error: Timer has not reached 00:00.
-    at https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js:581:168150
-2. When I click the element with the id of "break-decrement", the value within id="break-length" decrements by a value of 1, and I can see the updated value.278ms
-3. When I click the element with the id of "break-increment", the value within id="break-length" increments by a value of 1, and I can see the updated value.269ms
-4. When I click the element with the id of "session-decrement", the value within id="session-length" decrements by a value of 1, and I can see the updated value.270ms
-5. When I click the element with the id of "session-increment", the value within id="session-length" increments by a value of 1, and I can see the updated value.289ms
-6. I should not be able to set a session or break length to <= 0.850ms
-7. I should not be able to set a session or break length to > 60.1205ms
-8. When I first click the element with id="start_stop", the timer should begin running from the value currently displayed in id="session-length", even if the value has been incremented or decremented from the original value of 25.
-9. If the timer is running, the element with the id of "time-left" should display the remaining time in mm:ss format (decrementing by a value of 1 and updating the display every 1000ms).1506ms
-10. If the timer is running and I click the element with id="start_stop", the countdown should pause.3011ms
-11. If the timer is paused and I click the element with id="start_stop", the countdown should resume running from the point at which it was paused.4527ms
-12. When a session countdown reaches zero (NOTE: timer MUST reach 00:00), and a new countdown begins, the element with the id of "timer-label" should display a string indicating a break has begun.3881ms
-13. When a session countdown reaches zero (NOTE: timer MUST reach 00:00), a new break countdown should begin, counting down from the value currently displayed in the id="break-length" element.3990ms
-14. When a break countdown reaches zero (NOTE: timer MUST reach 00:00), and a new countdown begins, the element with the id of "timer-label" should display a string indicating a session has begun.7868ms
-15. When a break countdown reaches zero (NOTE: timer MUST reach 00:00), a new session countdown should begin, counting down from the value currently displayed in the id="session-length" element.7779ms
-#Audio
-1. When a countdown reaches zero (NOTE: timer MUST reach 00:00), a sound indicating that time is up should play. This should utilize an HTML5 <audio> tag and have a corresponding id="beep".4051ms
-2. The audio element with id="beep" must be 1 second or longer.
-3. The audio element with id of "beep" must stop playing and be rewound to the beginning when the element with the id of "reset" is clicked.
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25 + 5 Clock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .clock-container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            width: 100%;
+            max-width: 500px;
+        }
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .timer-controls button {
+            transition: all 0.2s ease;
+        }
+        .timer-controls button:hover {
+            transform: scale(1.1);
+        }
+        #beep {
+            display: none;
+        }
+        .settings-section {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.5rem;
+        }
+        .timer-section {
+            padding: 2rem;
+        }
+        #time-left {
+            font-size: 4rem;
+            line-height: 1;
+        }
+        @media (max-width: 640px) {
+            #time-left {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function PomodoroClock() {
+            const [breakLength, setBreakLength] = useState(5);
+            const [sessionLength, setSessionLength] = useState(25);
+            const [timerLabel, setTimerLabel] = useState('Sesi');
+            const [timeLeft, setTimeLeft] = useState(25 * 60);
+            const [isRunning, setIsRunning] = useState(false);
+            
+            const intervalRef = useRef(null);
+            const audioRef = useRef(null);
+            
+            const formatTime = (timeInSeconds) => {
+                const minutes = Math.floor(timeInSeconds / 60);
+                const seconds = timeInSeconds % 60;
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            };
+            
+            const startStopTimer = () => {
+                setIsRunning(!isRunning);
+            };
+
+            useEffect(() => {
+                if (isRunning) {
+                    intervalRef.current = setInterval(() => {
+                        setTimeLeft(prev => prev - 1);
+                    }, 1000);
+                } else {
+                    clearInterval(intervalRef.current);
+                }
+                return () => clearInterval(intervalRef.current);
+            }, [isRunning]);
+
+            useEffect(() => {
+                if (timeLeft === 0) {
+                    audioRef.current.play();
+                } else if (timeLeft < 0) {
+                    if (timerLabel === 'Sesi') {
+                        setTimerLabel('Istirahat');
+                        setTimeLeft(breakLength * 60);
+                    } else {
+                        setTimerLabel('Sesi');
+                        setTimeLeft(sessionLength * 60);
+                    }
+                }
+            }, [timeLeft, timerLabel, breakLength, sessionLength, audioRef]);
+            
+            const changeBreakLength = (increment) => {
+                if (!isRunning) {
+                    const newLength = breakLength + increment;
+                    if (newLength >= 1 && newLength <= 60) {
+                        setBreakLength(newLength);
+                        if (timerLabel === 'Istirahat') {
+                            setTimeLeft(newLength * 60);
+                        }
+                    }
+                }
+            };
+            
+            const changeSessionLength = (increment) => {
+                if (!isRunning) {
+                    const newLength = sessionLength + increment;
+                    if (newLength >= 1 && newLength <= 60) {
+                        setSessionLength(newLength);
+                        if (timerLabel === 'Sesi') {
+                            setTimeLeft(newLength * 60);
+                        }
+                    }
+                }
+            };
+
+            const resetTimer = () => {
+                clearInterval(intervalRef.current);
+                setIsRunning(false);
+                
+                setBreakLength(5);
+                setSessionLength(25);
+                setTimerLabel('Sesi');
+                setTimeLeft(25 * 60);
+                
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.currentTime = 0;
+                }
+            };
+            
+            return (
+                <div className="clock-container">
+                    <h1 className="text-3xl font-bold text-center py-6 bg-purple-600 text-white">
+                        25 + 5 Clock
+                    </h1>
+                    
+                    <div className="settings-section grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="break-control text-center">
+                            <h2 id="break-label" className="text-xl font-semibold mb-2 text-purple-800">
+                                Panjang Istirahat
+                            </h2>
+                            <div className="flex items-center justify-center space-x-4">
+                                <button 
+                                    id="break-decrement"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeBreakLength(-1)}
+                                >
+                                    <i className="fas fa-arrow-down"></i>
+                                </button>
+                                <span id="break-length" className="text-2xl font-bold w-10">
+                                    {breakLength}
+                                </span>
+                                <button 
+                                    id="break-increment"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeBreakLength(1)}
+                                >
+                                    <i className="fas fa-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="session-control text-center">
+                            <h2 id="session-label" className="text-xl font-semibold mb-2 text-purple-800">
+                                Durasi Sesi
+                            </h2>
+                            <div className="flex items-center justify-center space-x-4">
+                                <button 
+                                    id="session-decrement"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeSessionLength(-1)}
+                                >
+                                    <i className="fas fa-arrow-down"></i>
+                                </button>
+                                <span id="session-length" className="text-2xl font-bold w-10">
+                                    {sessionLength}
+                                </span>
+                                <button 
+                                    id="session-increment"
+                                    className="bg-purple-500 hover:bg-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
+                                    onClick={() => changeSessionLength(1)}
+                                >
+                                    <i className="fas fa-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="timer-section text-center">
+                        <div className="mb-8">
+                            <h2 id="timer-label" className="text-2xl font-semibold mb-4 text-purple-800">
+                                {timerLabel}
+                            </h2>
+                            <div id="time-left" className="timer-display text-purple-900">
+                                {formatTime(timeLeft)}
+                            </div>
+                        </div>
+                        
+                        <div className="timer-controls flex justify-center space-x-6">
+                            <button 
+                                id="start_stop"
+                                className="bg-green-500 hover:bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-xl"
+                                onClick={startStopTimer}
+                            >
+                                {isRunning ? <i className="fas fa-pause"></i> : <i className="fas fa-play"></i>}
+                            </button>
+                            <button 
+                                id="reset"
+                                className="bg-red-500 hover:bg-red-600 text-white rounded-full w-14 h-14 flex items-center justify-center text-xl"
+                                onClick={resetTimer}
+                            >
+                                <i className="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <audio 
+                        id="beep" 
+                        ref={audioRef} 
+                        src="https://raw.githubusercontent.com/freeCodeCamp/cdn/master/build/testable-projects-fcc/audio/BeepSound.wav"
+                        preload="auto"
+                    />
+                    
+                    <div className="py-4 text-center text-sm text-purple-700">
+                        Dibuat dengan React & Tailwind CSS
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PomodoroClock />);
+    </script>
+    
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+</body>
+</html>
